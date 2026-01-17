@@ -1,3 +1,5 @@
+import type { PlayerSkills, DetailedContract, DetailedPosition, PositionProficiency, PreferredFoot } from './skills';
+
 // Game date representation
 export interface GameDate {
   year: number;
@@ -6,7 +8,8 @@ export interface GameDate {
   weekday: string;
 }
 
-// Player position
+// Simplified player position for UI display
+// For detailed position matching Rust simulation, use DetailedPosition from './skills'
 export type Position =
   | 'GK'
   | 'CB' | 'LB' | 'RB' | 'LWB' | 'RWB'
@@ -66,6 +69,13 @@ export interface PlayerState {
     assists: number;
     averageRating: number;
   };
+
+  // Optional detailed data (from Rust simulation)
+  // These are provided when more detail is needed
+  detailedSkills?: PlayerSkills;
+  detailedContract?: DetailedContract;
+  detailedPositions?: PositionProficiency[];
+  preferredFoot?: PreferredFoot;
 }
 
 export type PlayerConcern =

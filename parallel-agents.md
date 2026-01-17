@@ -14,7 +14,7 @@ This document defines independent workstreams that can be implemented in paralle
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
 │  │   STREAM A   │  │   STREAM B   │  │   STREAM C   │  │   STREAM D   │ │
 │  │   React UI   │  │ Bridge Server│  │  Rust API    │  │ Claude Skill │ │
-│  │              │  │              │  │  Extensions  │  │              │ │
+│  │   🟡 ~70%    │  │   🟢 ~95%    │  │   🔴 ~10%    │  │   🟢 ~90%    │ │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘ │
 │         │                 │                 │                 │          │
 │         └─────────────────┴─────────────────┴─────────────────┘          │
@@ -22,35 +22,39 @@ This document defines independent workstreams that can be implemented in paralle
 │                         ┌─────────▼─────────┐                           │
 │                         │    STREAM E       │                           │
 │                         │  Shared Types     │                           │
-│                         │  (dependency)     │                           │
+│                         │  ✅ COMPLETE      │                           │
 │                         └───────────────────┘                           │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Stream E: Shared Types (Start First - Others Depend On This)
+## Stream E: Shared Types ✅ COMPLETE
 
 **Location**: `/packages/shared-types/`
 
+**Status**: **COMPLETE** - All types defined, compiled, and documented.
+
 **Description**: TypeScript types shared between frontend, bridge server, and skill. This is the contract that enables parallel development.
 
-**Files to Create**:
+**Files Created**:
 ```
 packages/shared-types/
 ├── package.json
 ├── tsconfig.json
+├── README.md              # Full documentation
 ├── src/
-│   ├── index.ts
+│   ├── index.ts           # Barrel exports
 │   ├── game-state.ts      # GameState, Player, Team, Match types
 │   ├── characters.ts      # Character, Personality, Mood types
 │   ├── conversations.ts   # Message, Conversation, ConversationOutcome
 │   ├── memory.ts          # Promise, KnowledgeFact, CharacterKnowledge
 │   ├── events.ts          # GameEvent, EventType, Notification
-│   └── api.ts             # Request/Response types for all endpoints
+│   ├── api.ts             # Request/Response types for all endpoints
+│   └── skills.ts          # NEW: Detailed skills aligned with Rust
 ```
 
-**Key Types to Define**:
+**Key Types Defined**:
 ```typescript
 // api.ts - The contract between all systems
 export interface ObservationResponse {
@@ -59,29 +63,41 @@ export interface ObservationResponse {
   players: PlayerState[];
   recentEvents: GameEvent[];
   activeConversation?: ConversationContext;
+  pendingNotifications: Notification[];
+  activePromises: Promise[];
+  recentKnowledge: KnowledgeFact[];
 }
 
 export interface ActRequest {
-  type: 'respond' | 'trigger_event' | 'update_memory';
-  payload: RespondPayload | TriggerEventPayload | UpdateMemoryPayload;
+  type: ActType;  // 'respond' | 'trigger_event' | 'update_memory' | 'end_conversation'
+  payload: ActPayload;
 }
 
-export interface ConversationContext {
-  characterId: string;
-  character: Character;
-  messages: Message[];
-  relevantPromises: Promise[];
-  relevantKnowledge: KnowledgeFact[];
+// skills.ts - Detailed player attributes matching Rust
+export interface PlayerSkills {
+  technical: TechnicalSkills;  // 14 attributes
+  mental: MentalSkills;        // 14 attributes
+  physical: PhysicalSkills;    // 9 attributes
 }
+
+export type DetailedPosition =
+  | 'GK' | 'SW' | 'DL' | 'DCL' | 'DC' | 'DCR' | 'DR'
+  | 'DM' | 'ML' | 'MCL' | 'MC' | 'MCR' | 'MR'
+  | 'AML' | 'AMC' | 'AMR' | 'WL' | 'WR'
+  | 'FL' | 'FC' | 'FR' | 'ST';
 ```
 
 **Completion Criteria**:
-- [ ] All types compile without errors
-- [ ] Types exported as npm package
-- [ ] README with type documentation
+- [x] All types compile without errors
+- [x] Types exported as npm package
+- [x] README with type documentation
 
-**Can Start**: Immediately
-**Blocks**: Streams A, B, D (they import these types)
+**Usage**:
+```typescript
+import type { ObservationResponse, ActRequest, Character } from '@open-football/shared-types';
+```
+
+**Blocks**: Streams A, B, D (they import these types) - **NOW UNBLOCKED**
 
 ---
 
@@ -227,11 +243,26 @@ interface BridgeState {
 ```
 
 **Completion Criteria**:
-- [ ] Server starts and responds to health check
-- [ ] Agent endpoints work with mock data
-- [ ] Frontend endpoints work with mock data
-- [ ] Can proxy requests to Rust backend
-- [ ] In-memory state persists across requests
+- [x] Server starts and responds to health check
+- [x] Agent endpoints work with mock data
+- [x] Frontend endpoints work with mock data
+- [x] Can proxy requests to Rust backend
+- [x] In-memory state persists across requests
+- [x] SSE streaming endpoint (`/api/agent/stream`)
+- [x] ObservationBuilder service for combining Rust + Bridge data
+- [x] RustClient enhanced with AI endpoint placeholders
+- [x] Inbox endpoints with read/dismiss functionality
+- [x] Event emitter pattern for real-time broadcasting
+- [ ] End-to-end testing with live Rust backend
+
+**Recent Updates**:
+- Added SSE streaming at `/api/agent/stream` with heartbeat
+- Created `observationBuilder.ts` to build ObservationResponse from Rust data + BridgeState
+- Enhanced `rustClient.ts` with AI-specific endpoints (getPlayerState, getTeamAIState, getSquadState, getRecentEvents)
+- Added proper inbox endpoints: GET `/api/inbox`, POST `/api/inbox/:id/read`, POST `/api/inbox/:id/dismiss`
+- Added dev-only seed endpoint: POST `/api/notifications/seed`
+- Integrated event emitter in BridgeState for SSE broadcasting
+- All TypeScript compiles without errors
 
 **Can Start**: After Stream E has basic types
 **Independent From**: Streams A, C, D (they connect via HTTP)
@@ -447,19 +478,24 @@ See /prompts/characters/ for personality templates
 
 ```
 Week 1:
-├── Stream E: Shared Types (ALL agents)
-│   └── Complete types before others start heavy work
+├── Stream E: Shared Types ✅ COMPLETE
+│   └── Types defined, compiled, documented
+│
+├── All other streams can now start in parallel:
+│
+├── Stream A: React Frontend (1 agent)
+│   └── Import types from @open-football/shared-types
+│
+├── Stream B: Bridge Server (1 agent)
+│   └── Import types from @open-football/shared-types
 │
 ├── Stream C: Rust Extensions (1 agent)
-│   └── Can start immediately, no dependencies
+│   └── No TypeScript dependency, can work independently
 │
-Week 1-2 (after E):
-├── Stream A: React Frontend (1 agent)
-├── Stream B: Bridge Server (1 agent)
 ├── Stream D: Claude Skill (1 agent)
-│   └── All can work in parallel with mocks
+│   └── Reference types documentation in README.md
 
-Week 3:
+Week 2-3:
 └── Integration: Wire everything together
 ```
 
@@ -467,13 +503,13 @@ Week 3:
 
 ## Agent Assignment Suggestions
 
-| Stream | Complexity | Estimated Effort | Notes |
-|--------|------------|------------------|-------|
-| E: Types | Low | 2-3 hours | Do first, enables others |
-| A: React | Medium | 2-3 days | Familiar patterns |
-| B: Bridge | Medium | 2-3 days | Core of the system |
-| C: Rust | Medium | 1-2 days | Extend existing code |
-| D: Skill | High | 2-3 days | Prompt engineering intensive |
+| Stream | Complexity | Estimated Effort | Status |
+|--------|------------|------------------|--------|
+| E: Types | Low | 2-3 hours | ✅ **COMPLETE** |
+| A: React | Medium | 2-3 days | 🟡 ~70% - Has routes, inbox, layout. Missing: API hooks, stores, full conversation UI |
+| B: Bridge | Medium | 2-3 days | 🟢 ~95% - Has SSE streaming, observationBuilder, RustClient, inbox endpoints. Missing: E2E testing |
+| C: Rust | Medium | 1-2 days | 🔴 ~10% - Existing routes only. Missing: AI endpoints (mood, ai-state, squad-state) |
+| D: Skill | High | 2-3 days | 🟢 ~90% - Has SKILL.md, prompts, examples. Missing: Test with live bridge |
 
 ---
 
