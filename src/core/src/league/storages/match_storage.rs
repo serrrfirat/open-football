@@ -29,6 +29,21 @@ impl MatchStorage {
     {
         self.results.get(match_id.as_ref())
     }
+
+    /// Returns an iterator over all match results
+    pub fn iter(&self) -> impl Iterator<Item = &MatchResult> {
+        self.results.values()
+    }
+
+    /// Returns the number of matches stored
+    pub fn len(&self) -> usize {
+        self.results.len()
+    }
+
+    /// Returns true if there are no matches stored
+    pub fn is_empty(&self) -> bool {
+        self.results.is_empty()
+    }
 }
 
 #[cfg(test)]
