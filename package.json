@@ -1,0 +1,25 @@
+{
+  "name": "open-football-ai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @open-football/bridge --filter @open-football/ui-react run --parallel dev",
+    "dev:bridge": "pnpm --filter @open-football/bridge run dev",
+    "dev:ui": "pnpm --filter @open-football/ui-react run dev",
+    "dev:all": "pnpm run dev & pnpm run dev:rust",
+    "dev:rust": "cargo run --manifest-path src/Cargo.toml",
+    "build": "pnpm run build:types && pnpm --filter @open-football/bridge --filter @open-football/ui-react run --parallel build",
+    "build:types": "pnpm --filter @open-football/shared-types run build",
+    "build:bridge": "pnpm --filter @open-football/bridge run build",
+    "build:ui": "pnpm --filter @open-football/ui-react run build",
+    "clean": "pnpm -r run clean",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  }
+}

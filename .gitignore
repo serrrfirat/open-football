@@ -1,15 +1,52 @@
+# Rust
 /target
+**/target
 **/*.rs.bk
 
-**/target
+# Node/pnpm
+node_modules/
+pnpm-lock.yaml
+.pnpm-store/
 
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# TypeScript compiled output (in packages)
+packages/*/dist/
+bridge/dist/
+ui-react/dist/
+
+# IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
 
+# Logs
+*.log
+firebase-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Project specific
 training_result.json
-
 matches
 publish
-
 artifacts
 
-dist
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.local
+.cache/
