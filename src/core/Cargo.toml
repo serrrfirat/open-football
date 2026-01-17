@@ -12,7 +12,7 @@ rayon = "1.11.0"
 serde = { version = "1.0.228", features = ["derive"] }
 log = "0.4.29"
 itertools = "0.14.0"
-nalgebra = { version = "0.34.1", features = ["serde-serialize", "rand"] }
+nalgebra = { version = "0.33", features = ["serde-serialize", "rand"] }
 
 [profile.release]
 opt-level = 3          # Highest optimization for speed (default in release, but explicit is fine).
