@@ -5,3 +5,4 @@ export * from './conversations';
 export * from './memory';
 export * from './events';
 export * from './api';
+export * from './skills';

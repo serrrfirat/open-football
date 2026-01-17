@@ -11,6 +11,7 @@ import type {
   Promise,
   KnowledgeFact,
   GameDate,
+  StreamEvent,
 } from '@open-football/shared-types';
 
 interface AgentMessage extends AgentMessageRequest {
@@ -18,7 +19,23 @@ interface AgentMessage extends AgentMessageRequest {
   at: Date;
 }
 
+// Event listener type
+type EventListener = (event: StreamEvent) => void;
+
 class BridgeState {
+  // Event listeners for SSE broadcasting
+  private eventListeners: Set<EventListener> = new Set();
+
+  // Register an event listener (used by SSE endpoint)
+  onEvent(listener: EventListener) {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
+  // Broadcast event to all listeners
+  private broadcast(event: StreamEvent) {
+    this.eventListeners.forEach(listener => listener(event));
+  }
   // Latest observation from game
   private observation: ObservationResponse | null = null;
 
@@ -199,6 +216,10 @@ class BridgeState {
     };
 
     this.notifications.unshift(newNotification);
+
+    // Broadcast notification event to SSE clients
+    this.broadcast({ type: 'notification', notification: newNotification });
+
     return newNotification;
   }
 
@@ -253,6 +274,12 @@ class BridgeState {
       ),
       relevantKnowledge: this.knowledge.get(conversation.characterId) || [],
       recentInteractions: [],
+      gameContext: {
+        currentDate: this.observation?.gameDate || this.mockGameDate(),
+        recentResults: this.observation?.team?.recentForm || 'WWLDW',
+        leaguePosition: this.observation?.team?.leaguePosition || 3,
+        nextMatch: undefined,
+      },
     };
   }
 

@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { bridgeState } from '../services/bridgeState.js';
 import type {
-  ObservationResponse,
   ActRequest,
   AgentNextResponse,
   AgentMessageRequest,
@@ -44,4 +43,35 @@ agentRouter.get('/messages', (req, res) => {
   const since = req.query.since as string | undefined;
   const messages = bridgeState.getAgentMessages(since);
   res.json({ messages });
+});
+
+// GET /api/agent/stream - SSE endpoint for real-time updates
+agentRouter.get('/stream', (req, res) => {
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // Send initial connection event
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+
+  // Subscribe to bridge state events
+  const unsubscribe = bridgeState.onEvent((event) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  });
+
+  console.log('SSE client connected');
+
+  // Send heartbeat every 30 seconds to keep connection alive
+  const heartbeatInterval = setInterval(() => {
+    res.write(`data: ${JSON.stringify({ type: 'heartbeat', timestamp: new Date().toISOString() })}\n\n`);
+  }, 30000);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    clearInterval(heartbeatInterval);
+    unsubscribe();
+    console.log('SSE client disconnected');
+  });
 });
