@@ -13,3 +13,14 @@ publish
 artifacts
 
 dist
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Logs
+firebase-debug.log
+
+# Build
+dist/
+*.js
+*.d.ts
